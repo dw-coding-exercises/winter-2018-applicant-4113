@@ -1,7 +1,10 @@
 (ns my-exercise.home
   (:require [hiccup.page :refer [html5]]
             [ring.util.anti-forgery :refer [anti-forgery-field]]
-            [my-exercise.us-state :as us-state]))
+            [my-exercise.us-state :as us-state]
+            [clojure.string :as string]
+            [clj-http.client :as http]
+            ))
 
 (defn header [_]
   [:head
@@ -136,3 +139,24 @@
    (header request)
    (instructions request)
    (address-form request)))
+
+(defn get-ocd-ids
+  "Get OCD-IDs, given a state and city"
+  [state city]
+  (let [usa "ocd-division/country:us"
+        state-ocd-id (str usa "/state:" (string/lower-case state))
+        place-ocd-id (str state-ocd-id "/place:" (string/replace (string/lower-case city) " " "_"))]
+    [state-ocd-id place-ocd-id]))
+
+(defn search
+  "Capture the form field values and submit API call"
+  [{:keys [city state]}] ; Get values from request map
+
+  ; Make API call
+  (let [ocd-ids (get-ocd-ids state city)
+        state-ocd-id (first ocd-ids)
+        place-ocd-id (last ocd-ids)
+        url (str "https://api.turbovote.org/elections/upcoming?district-divisions=" state-ocd-id "," place-ocd-id)]
+    (http/get url {:accept :json})))
+
+  ; TODO - parse json
